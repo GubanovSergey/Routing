@@ -5,7 +5,7 @@ CXXFLAGS?=-g -std=c++17 -Wall -Wextra -I $(BOOST)
 
 steiner: steiner.o tinyxml2.o 
 
-steiner.o: steiner.cpp grid_graph.h
+steiner.o: steiner.cpp steiner.h grid_graph.h
 
 clean:
 	rm -f *.o *~ steiner

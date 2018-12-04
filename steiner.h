@@ -38,10 +38,10 @@ public:
     void dump_segment(tinyxml2::XMLElement * netElement, 
             PtsCont && pts) {
         using namespace tinyxml2;
-
+//TODO add zero segment if needed
         auto& [p1, p2] = pts;
-        bool vertical = (p1.x_ == p2.x_);
-        assert (vertical || p1.y_ == p2.y_); //strait
+        bool horiz = (p1.y_ == p2.y_);
+        assert (horiz || p1.x_ == p2.x_); //strait
         
         XMLElement * elem = netElement->GetDocument()->NewElement("segment");
         //TODO if horizontal, do not forget to via up and back
@@ -50,11 +50,11 @@ public:
         elem->SetAttribute("x2", p2.x_); 
         elem->SetAttribute("y2", p2.y_); 
             
-        const char * l = vertical ? "m3" : "m2";
+        const char * l = horiz ? "m2" : "m3";
         elem->SetAttribute("layer", l); 
         netElement->InsertEndChild(elem); 
 
-        if (vertical) {
+        if (!horiz) {
             p1.dump_via(netElement, true);
             p2.dump_via(netElement, true);
         }
@@ -64,13 +64,21 @@ public:
         using namespace tinyxml2;
         auto & p1 = graph_.pts_[edge.first_];
         auto & p2 = graph_.pts_[edge.second_];
-        
-        if (p1.x_ == p2.x_ || p1.y_ == p2.y_) { //strait
+       
+        bool hor = p1.y_ == p2.y_;
+        bool vert = p1.x_ == p2.x_;
+        if (vert || hor) { //strait
             dump_segment(netElement, std::forward_as_tuple(p1,p2));
         } else {
             auto seg = p1.horizontalSegment(p2);
             dump_segment(netElement, seg);
             dump_segment(netElement, std::forward_as_tuple(seg.second, p2));
+        }
+        if (!hor) { //vert or 2-seg
+            if (cnts_[edge.second_].degree() == 1) {
+                std::cout << "Zero segment" << std::endl;
+                dump_segment(netElement, std::forward_as_tuple(p2,p2));
+            }
         }
     }
 
