@@ -19,32 +19,15 @@ public:
     std::vector<NodeConnections> cnts_;
     unsigned length_;
 
-    /*void dump_connections(XMLElement * netElement, unsigned p_id) {
-    //return true if additional via m2_m3 needed
-        auto &conn = cnts_[p_id]; 
-        bool is_viad = false;
-        for (unsigned i = 0; i < 4; i++) {
-            if (!conn.is_connected(i))
-                continue;
-            unsigned edge_id = conn.connection(i);
-            if (dump_edge(netElement, edge_id)) {//via needed
-                graph_.pts_[p_id].dump_via(netElement, true);
-                is_viad = true;
-            } 
-        }
-    }*/
-
     template <typename PtsCont>
     void dump_segment(tinyxml2::XMLElement * netElement, 
-            PtsCont && pts) {
+            PtsCont && pts, bool via1 = false, bool via2 = false) {
         using namespace tinyxml2;
-//TODO add zero segment if needed
         auto& [p1, p2] = pts;
         bool horiz = (p1.y_ == p2.y_);
         assert (horiz || p1.x_ == p2.x_); //strait
         
         XMLElement * elem = netElement->GetDocument()->NewElement("segment");
-        //TODO if horizontal, do not forget to via up and back
         elem->SetAttribute("x1", p1.x_); 
         elem->SetAttribute("y1", p1.y_); 
         elem->SetAttribute("x2", p2.x_); 
@@ -53,26 +36,40 @@ public:
         const char * l = horiz ? "m2" : "m3";
         elem->SetAttribute("layer", l); 
         netElement->InsertEndChild(elem); 
-
+        
         if (!horiz) {
-            p1.dump_via(netElement, true);
-            p2.dump_via(netElement, true);
+            if (via1)
+                p1.dump_via(netElement, true);
+            if (via2)
+                p2.dump_via(netElement, true);
+        } else {
+            assert((via1 == via2) && (via2 == false));
         }
     }
 
     void dump_edge(tinyxml2::XMLElement * netElement, GridGraphEdge & edge) {
         using namespace tinyxml2;
+        assert(cnts_.size() == graph_.pts_.size());
+        static boost::dynamic_bitset<> viad(cnts_.size());
+        
         auto & p1 = graph_.pts_[edge.first_];
         auto & p2 = graph_.pts_[edge.second_];
        
         bool hor = p1.y_ == p2.y_;
         bool vert = p1.x_ == p2.x_;
-        if (vert || hor) { //strait
-            dump_segment(netElement, std::forward_as_tuple(p1,p2));
+        bool needed1 = false;
+        bool needed2 = false;
+        if (hor || vert) { //strait
+            if (vert) {
+                needed1 = !viad.test_set(edge.first_);
+                needed2 = !viad.test_set(edge.second_);
+            }
+            dump_segment(netElement, std::forward_as_tuple(p1,p2), needed1, needed2);
         } else {
             auto seg = p1.horizontalSegment(p2);
             dump_segment(netElement, seg);
-            dump_segment(netElement, std::forward_as_tuple(seg.second, p2));
+            needed2 = !viad.test_set(edge.second_);
+            dump_segment(netElement, std::forward_as_tuple(seg.second, p2), true, needed2);
         }
         if (!hor) { //vert or 2-seg
             if (cnts_[edge.second_].degree() == 1) {
@@ -104,8 +101,6 @@ public:
 
         //choose Kruscal algorithm for implementation
         std::priority_queue<GridGraphEdge, std::vector<GridGraphEdge>, std::greater<GridGraphEdge>> edges;
-        //implement comparison for edges
-        boost::dynamic_bitset<> visited(graph_.pts_.size());
         
         typedef std::map<unsigned, size_t> rank_t; // => order on Element
         typedef std::map<unsigned, unsigned> parent_t;

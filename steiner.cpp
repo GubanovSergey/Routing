@@ -1,12 +1,13 @@
 #include "tinyxml2.h"
 #include "steiner.h"
+#include <string>
 
 template <typename InsIter>
-void get_nodes(InsIter it, const char * filename) {
+void get_nodes(InsIter it, std::string filename) {
     using namespace tinyxml2; 
 
     XMLDocument doc;
-    doc.LoadFile(filename);
+    doc.LoadFile((filename+".xml").c_str());
 
     XMLElement* gridElement = doc.FirstChildElement()->FirstChildElement( "grid" );
     int min_x, min_y;
@@ -44,7 +45,11 @@ void print_answer(SteinerMST & solution, char * argv[]) {
     using namespace tinyxml2; 
     
     XMLDocument doc;
-    doc.LoadFile(argv[1]);
+    std::string from = argv[1];
+    from+=".xml";
+    std::string to = argv[1];
+    to += "_out.xml";
+    doc.LoadFile(from.c_str());
     XMLElement * netElement = doc.FirstChildElement()->FirstChildElement("net");
 
     auto & pts = solution.graph_.pts_;
@@ -54,13 +59,13 @@ void print_answer(SteinerMST & solution, char * argv[]) {
 //core pts itself are printed in initial doc
     }
     dump_edges(netElement, solution);    
-    doc.SaveFile(argv[2]);
+    doc.SaveFile(to.c_str());
 }
 
 int main(int argc, char* argv[]) {
     //first argument is npoints, then b
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s file_in file_out\n", argv[0]);
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <file_in>.xml\nThe result placed in <file_in>_out.xml\n", argv[0]);
         exit(0);
     }
     
