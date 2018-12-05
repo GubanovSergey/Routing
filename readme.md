@@ -1,6 +1,6 @@
 Steiner tree build
 
-Requirement: one needs to have a boost distribution downloaded, as this project uses some header-only packages. So, no need to have boost build
+Requirement: one needs to have a boost distribution downloaded, as this project uses some header-only packages. So, no need to have boost built
 
 To build: BOOST=<PATH_TO_BOOST> make
 
