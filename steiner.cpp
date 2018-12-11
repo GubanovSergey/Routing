@@ -3,12 +3,16 @@
 #include <string>
 
 template <typename InsIter>
-void get_nodes(InsIter it, std::string filename) {
+void get_nodes(InsIter it, const char * filename) {
     using namespace tinyxml2; 
 
     XMLDocument doc;
-    doc.LoadFile((filename+".xml").c_str());
+    auto err_code = doc.LoadFile(filename);
 
+    if (err_code != XML_SUCCESS) {
+        fprintf(stderr, "File cannot be loaded. Probably the path is wrong\n");
+        exit(-1);
+    }
     XMLElement* gridElement = doc.FirstChildElement()->FirstChildElement( "grid" );
     int min_x, min_y;
     gridElement->QueryIntAttribute( "min_x", &min_x );
@@ -45,11 +49,10 @@ void print_answer(SteinerMST & solution, char * argv[]) {
     using namespace tinyxml2; 
     
     XMLDocument doc;
-    std::string from = argv[1];
-    from+=".xml";
     std::string to = argv[1];
-    to += "_out.xml";
-    doc.LoadFile(from.c_str());
+    auto index = to.rfind(".xml");
+    to.insert(index, "_out");
+    doc.LoadFile(argv[1]);
     XMLElement * netElement = doc.FirstChildElement()->FirstChildElement("net");
 
     auto & pts = solution.graph_.pts_;
